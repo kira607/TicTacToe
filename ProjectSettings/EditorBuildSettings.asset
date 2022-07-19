@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/MainMenu.unity
+    guid: 31b504954ad8cfc4b99d8d5e61123ebe
+  - enabled: 1
     path: Assets/Scenes/TicTacToe.unity
     guid: 99c9720ab356a0642a771bea13969a05
   m_configObjects: {}

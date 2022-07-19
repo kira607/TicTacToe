@@ -1,25 +1,36 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class GameSupervisor: MonoBehaviour
 {
     public GameObject cross;
     public GameObject circle;
+    public GameObject gameOverMenuCanvas;
+    
+    private bool _gameRunning;
     private bool _crossTurn;
     private Cell[][] _cells;
+    private Cell[] _winningCells;
 
     private void Start()
     {
+        gameOverMenuCanvas.SetActive(false);
+        _gameRunning = true;
         _crossTurn = true;
         LoadBoard();
     }
 
     private void Update()
     {
+        if (!_gameRunning)
+            return;
         var winner = AnalyseBoard();
         if (winner != PieceType.None)
         {
             GameOver(winner);
+            _gameRunning = false;
         }
     }
 
@@ -40,30 +51,75 @@ public class GameSupervisor: MonoBehaviour
 
     private PieceType AnalyseBoard() // -> winning piece type
     {
+        Cell c1, c2, c3;
         // horizontal lines
         for (var i = 0; i < 3; i++)
         {
-            var p1 = _cells[i][0].CurrentPiece();
-            var p2 = _cells[i][1].CurrentPiece();
-            var p3 = _cells[i][2].CurrentPiece();
-            if (p1 == p2 && p2 == p3 && p1 == p3 && p1 != PieceType.None)
+            c1 = _cells[i][0];
+            c2 = _cells[i][1];
+            c3 = _cells[i][2];
+            if (isWinningLine(new List<Cell> { c1, c2, c3 }))
             {
-                return p1;
+                _winningCells = new[] { c1, c2, c3 };
+                return c1.CurrentPiece();
             }
         }
         // vertical lines
         for (var i = 0; i < 3; i++)
         {
-            var p1 = _cells[0][i].CurrentPiece();
-            var p2 = _cells[1][i].CurrentPiece();
-            var p3 = _cells[2][i].CurrentPiece();
-            if (p1 == p2 && p2 == p3 && p1 == p3 && p1 != PieceType.None)
+            c1 = _cells[0][i];
+            c2 = _cells[1][i];
+            c3 = _cells[2][i];
+            if (isWinningLine(new List<Cell> { c1, c2, c3 }))
             {
-                return p1;
+                _winningCells = new[] { c1, c2, c3 };
+                return c1.CurrentPiece();
             }
         }
         // diagonal lines
-        return 0;
+        c1 = _cells[0][0];
+        c2 = _cells[1][1];
+        c3 = _cells[2][2];
+        if (isWinningLine(new List<Cell> { c1, c2, c3 }))
+        {
+            _winningCells = new[] { c1, c2, c3 };
+            return c1.CurrentPiece();
+        }
+        
+        c1 = _cells[2][0];
+        c2 = _cells[1][1];
+        c3 = _cells[0][2];
+        if (isWinningLine(new List<Cell> { c1, c2, c3 }))
+        {
+            _winningCells = new[] { c1, c2, c3 };
+            return c1.CurrentPiece();
+        }
+        
+        // is board is full
+        return _cells.SelectMany(cellsRow => cellsRow).Any(cell => !cell.IsBusy()) ? (PieceType)0 : (PieceType)0;
+    }
+
+    bool isWinningLine(List<Cell> cells)
+    {
+        if (cells.Count == 0)
+            return false;
+        
+        var winningPiece = cells[0].CurrentPiece();
+        
+        foreach (var p in cells.Select(cell => cell.CurrentPiece()))
+        {
+            if (p == PieceType.None)
+            {
+                return false;
+            }
+
+            if (p != winningPiece)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void LoadBoard()
@@ -81,6 +137,8 @@ public class GameSupervisor: MonoBehaviour
 
     private void GameOver(PieceType winner)
     {
+        LockWinningCells();
+        LockCells();
         var winnerString = winner switch
         {
             PieceType.None => "No one",
@@ -88,7 +146,30 @@ public class GameSupervisor: MonoBehaviour
             PieceType.Circle => "Circle",
             _ => "Strange Alien"
         };
+        foreach (var winningCell in _winningCells)
+        {
+            winningCell.HighlightWinning();
+        }
         Debug.Log(winnerString + " wins!");
-        Application.Quit();
+        gameOverMenuCanvas.gameObject.SetActive(true);
+    }
+
+    private void LockWinningCells()
+    {
+        foreach (var cell in _winningCells)
+        {
+            cell.Lock(true);
+        }
+    }
+
+    private void LockCells()
+    {
+        foreach (var cellsRow in _cells)
+        {
+            foreach (var cell in cellsRow)
+            {
+                cell.Lock(false);
+            }
+        }
     }
 }

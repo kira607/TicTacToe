@@ -1,23 +1,47 @@
+using UnityEditor.UI;
 using UnityEngine;
 
 public class Cell : MonoBehaviour
 {
     public float highlightSpeed;
     public Color highlightColor = ColorMaker.MakeGrey(60);
+    public Color highlightWinningColor = ColorMaker.MakeColor(150, 40, 40);
     
     private Color _idleColor;
     private GameSupervisor _supervisor;
     private Camera _cam;
     private Renderer _renderer;
     private PieceType _piece;
+    private bool _locked;
+    private bool _winning;
 
     public PieceType CurrentPiece()
     {
         return _piece;
     }
 
+    public void HighlightWinning()
+    {
+        _renderer.material.color = Color.Lerp(CurrentColor(), highlightWinningColor, highlightSpeed * Time.deltaTime);   
+    }
+
+    public void Lock(bool winning)
+    {
+        if (_locked)
+            return;
+        _locked = true;
+        _winning = winning;
+    }
+    
+    public bool IsBusy()
+    {
+        return _piece != PieceType.None;
+    }
+
     private void Start()
     {
+        _locked = false;
+        _winning = false;
         _cam = Camera.main;
         _renderer = GetComponent<Renderer>();
         _idleColor = CurrentColor();
@@ -27,6 +51,14 @@ public class Cell : MonoBehaviour
 
     private void Update()
     {
+        if (_locked)
+        {
+            if (_winning)
+            {
+                HighlightWinning();
+            }
+            return;
+        }
         var hit = Raycast();
 
         if (hit.transform.name != transform.name)
@@ -70,10 +102,5 @@ public class Cell : MonoBehaviour
         var ray = _cam.ScreenPointToRay(Input.mousePosition);
         Physics.Raycast(ray, out var hit);
         return hit;
-    }
-
-    private bool IsBusy()
-    {
-        return _piece != PieceType.None;
     }
 }
